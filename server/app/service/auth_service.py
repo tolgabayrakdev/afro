@@ -11,15 +11,22 @@ class AuthService:
     async def login(email: str, password: str):
         try:
             hash_password = Helper.generate_hash_password(password=password)
-            query = text(
-                "SELECT * FROM users WHERE email = :email and password = :password"
-            )
-            result = connection.execute(query, email=email, password=hash_password)
-            print(result)
-            for row in result:
-                print(row)
-                return row
+            query = text("SELECT * FROM users WHERE email = :email")
+            result = connection.execute(query, [{"email": email, "password": password}])
+            if result:
+                for row in result:
+                    access_token = Helper.generate_access_token(
+                        {"email": row.id, "password": row.password}
+                    )
+                    refresh_token = Helper.generate_access_token(
+                        {"email": row.id, "password": row.password}
+                    )
+                    return {
+                        "access_token": access_token,
+                        "refresh_token": refresh_token,
+                    }
         except SQLAlchemyError as e:
+            print(e)
             raise HTTPException(status_code=500, detail="Database Error!")
 
     @staticmethod
