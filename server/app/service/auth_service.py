@@ -10,7 +10,8 @@ class AuthService:
     async def login(email: str, password: str):
         try:
             hash_password = Helper.generate_hash_password(password=password)
-            query = text("SELECT * FROM users WHERE email = :email and password = :hash_password")
+            query = text("SELECT * FROM users WHERE email = :email and password = :password")
+            print(hash_password)
             result = connection.execute(query, [{"email": email, "password": hash_password}])
             if result:
                 for row in result:
@@ -29,17 +30,23 @@ class AuthService:
             raise HTTPException(status_code=500, detail="Database Error!")
 
     @staticmethod
-    async def register(data: Any):
+    def register(data: Any):
         try:
+            connection.begin()
             hash_password = Helper.generate_hash_password(password=data.password)
             query = text(
                 """
-                INSERT INTO users(username, email, password)
-                VALUES(%s, %s, %s)
+                INSERT INTO users (username, email, password, role_id, created_at, updated_at)
+                VALUES(:username, :email, :password, :role_id, now(), now());
                 """
             )
-            result = connection.execute(query, data.username, data.email, hash_password)
-            for row in result:
-                return row
+            connection.execute(query, {
+                "username": data.username,
+                "email": data.email,
+                "password": hash_password,
+                "role_id": 1
+            })
+            connection.commit()
         except SQLAlchemyError as e:
+            connection.rollback()
             raise HTTPException(status_code=500, detail="Database Error!")
