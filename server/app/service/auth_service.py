@@ -5,14 +5,13 @@ from fastapi import HTTPException
 from util.helper import Helper
 from typing import Any
 
-
 class AuthService:
     @staticmethod
     async def login(email: str, password: str):
         try:
             hash_password = Helper.generate_hash_password(password=password)
-            query = text("SELECT * FROM users WHERE email = :email")
-            result = connection.execute(query, [{"email": email, "password": password}])
+            query = text("SELECT * FROM users WHERE email = :email and password = :hash_password")
+            result = connection.execute(query, [{"email": email, "password": hash_password}])
             if result:
                 for row in result:
                     access_token = Helper.generate_access_token(
@@ -41,8 +40,6 @@ class AuthService:
             )
             result = connection.execute(query, data.username, data.email, hash_password)
             for row in result:
-                print(row)
                 return row
-
         except SQLAlchemyError as e:
             raise HTTPException(status_code=500, detail="Database Error!")
